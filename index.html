@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Control Lab | Department of Electronics and Instrumentation Engineering</title>
+    <meta name="description" content="Process Control Virtual Laboratory - Department of Electronics and Instrumentation Engineering. Study of ON/OFF, P, PI, PD, and PID flow process control with real-time trend plots.">
+    <!-- Anti-cache headers -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- MathJax for TeX equations -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="css/styles.css?v=3.3">
+</head>
+<body class="light-theme">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+        <div class="header-branding">
+            <div class="header-titles">
+                <h1>Process Control Lab</h1>
+                <p class="subtitle">Department of Electronics and Instrumentation Engineering</p>
+            </div>
+        </div>
+        
+        <div class="header-actions">
+            <div class="sim-status-pill pending" id="simStatusPill">
+                <span class="status-dot"></span>
+                <span id="simStatusText">Wiring Incomplete</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btnResetSim" onclick="resetSimulation()" title="Reset Experiment">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+            <button class="btn btn-primary btn-sm" id="btnStartSim" onclick="startSimulation()">
+                <i class="fa-solid fa-play"></i> Start Simulation
+            </button>
+            <button class="btn btn-outline btn-sm hidden" id="btnStopSim" onclick="stopSimulation()">
+                <i class="fa-solid fa-stop"></i> Stop
+            </button>
+        </div>
+    </header>
+
+    <!-- Persistent Top Navigation Tabs -->
+    <nav class="vlab-nav-tabs">
+        <button class="tab-btn active" data-tab="tab-experiment">
+            <i class="fa-solid fa-sliders"></i> 1. Experiment
+        </button>
+        <button class="tab-btn" data-tab="tab-apparatus">
+            <i class="fa-solid fa-cubes"></i> 2. Apparatus
+        </button>
+        <button class="tab-btn" data-tab="tab-theory">
+            <i class="fa-solid fa-book"></i> 3. Theory
+        </button>
+        <button class="tab-btn" data-tab="tab-procedure">
+            <i class="fa-solid fa-list-check"></i> 4. Procedure
+        </button>
+        <button class="tab-btn" data-tab="tab-observations">
+            <i class="fa-solid fa-table"></i> 5. Observations
+        </button>
+        <button class="tab-btn" data-tab="tab-quiz">
+            <i class="fa-solid fa-circle-question"></i> 6. Viva / Quiz
+        </button>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="vlab-content">
+
+        <!-- TAB 1: MAIN INTERACTIVE EXPERIMENT PAGE -->
+        <section id="tab-experiment" class="tab-panel active">
+            
+            <!-- Experiment Banner Title -->
+            <div class="exp-title-card card">
+                <div class="exp-title-row">
+                    <div>
+                        <h2>Flow Process Control</h2>
+                        <p class="sub-heading">Comparative study of ON/OFF, P, PI, PD, and PID control performance on a flow process</p>
+                    </div>
+                    <div class="wiring-alert-box" id="wiringAlertBox">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <span id="wiringAlertText">Complete control loop signal wiring to enable simulation.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experiment Layout Grid -->
+            <div class="exp-grid">
+                
+                <!-- LEFT: INTERACTIVE PROCESS & WIRING SCHEMATIC -->
+                <div class="card schematic-card-wrapper">
+                    <div class="card-header-flex">
+                        <h3><i class="fa-solid fa-diagram-project"></i> Process Diagram & Signal Wiring</h3>
+                        <div class="schematic-actions">
+                            <button class="btn btn-outline btn-xs" onclick="wiringManager.clearConnections()">
+                                <i class="fa-solid fa-broom"></i> Clear Wiring
+                            </button>
+                            <button class="btn btn-secondary btn-xs" onclick="wiringManager.autoConnect()">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Auto Wiring
+                            </button>
+                        </div>
+                    </div>
+
+                    <p class="instruction-tip">
+                        <i class="fa-solid fa-hand-pointer"></i> Click banana jacks to patch signal loops: 
+                        <strong>Green CO Jacks</strong> (Controller Output to I/P), 
+                        <strong>Blue PV Jacks</strong> (Flow Transmitter to Controller PV), and 
+                        <strong>SP → Controller SP</strong>. (Or click <em>Auto Wiring</em>).
+                    </p>
+
+                    <!-- Interactive SVG Process Diagram & Wiring Layer -->
+                    <div class="svg-container" id="svgContainer">
+                        <!-- Rendered dynamically by schematic-render.js & wiring-system.js -->
+                    </div>
+                </div>
+
+                <!-- RIGHT: CONTROLLER MODE SELECTION & EDUCATIONAL FEEDBACK -->
+                <div class="card control-desk-card">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-microchip"></i> Controller Mode Selection</h3>
+                    </div>
+
+                    <!-- Controller Mode Buttons (Clean, Sliders Removed) -->
+                    <div class="control-group">
+                        <label class="input-label">Select Controller Type</label>
+                        <div class="segmented-nav vertical-nav">
+                            <button class="segment-tab active" id="btnModeONOFF" onclick="setControllerMode('ONOFF')">
+                                <i class="fa-solid fa-toggle-on"></i> ON/OFF Controller
+                            </button>
+                            <button class="segment-tab" id="btnModeP" onclick="setControllerMode('P')">
+                                <i class="fa-solid fa-chart-line"></i> Proportional (P) Controller
+                            </button>
+                            <button class="segment-tab" id="btnModePI" onclick="setControllerMode('PI')">
+                                <i class="fa-solid fa-bullseye"></i> Proportional-Integral (PI) Controller
+                            </button>
+                            <button class="segment-tab" id="btnModePD" onclick="setControllerMode('PD')">
+                                <i class="fa-solid fa-shield-halved"></i> Proportional-Derivative (PD) Controller
+                            </button>
+                            <button class="segment-tab" id="btnModePID" onclick="setControllerMode('PID')">
+                                <i class="fa-solid fa-star"></i> PID Controller (Optimal)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Set Point Quick Buttons -->
+                    <div class="control-group">
+                        <label class="input-label">Flow Set Point Target</label>
+                        <div class="sp-btn-row">
+                            <button class="btn btn-outline btn-sm" onclick="setSetpointPreset(30)">30 %</button>
+                            <button class="btn btn-outline btn-sm active" id="spBtn50" onclick="setSetpointPreset(50)">50 %</button>
+                            <button class="btn btn-outline btn-sm" onclick="setSetpointPreset(70)">70 %</button>
+                        </div>
+                    </div>
+
+                    <!-- Disturbance Load Toggle -->
+                    <div class="control-group">
+                        <label class="input-label">Recirculation Load Disturbance</label>
+                        <button class="btn btn-secondary btn-sm" id="btnToggleDisturbance" onclick="toggleDisturbance()">
+                            <i class="fa-solid fa-faucet-drip"></i> Open Bypass Valve (HV1 Disturbance)
+                        </button>
+                    </div>
+
+                    <!-- Educational Guidance Banner Card -->
+                    <div class="card edu-feedback-card" id="eduFeedbackCard">
+                        <div class="edu-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+                        <div class="edu-content">
+                            <h4 id="eduTitle">ON/OFF Control</h4>
+                            <p id="eduText">ON/OFF control switches the final control element based on the error and hysteresis limits.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- LIVE TREND GRAPH & REAL-TIME READOUTS -->
+            <div class="trend-section card">
+                <div class="trend-header">
+                    <div class="trend-title">
+                        <h3><i class="fa-solid fa-chart-line"></i> Real-Time Process Response & Trend Plot</h3>
+                        <span class="live-pill"><span class="pulse-dot"></span> LIVE</span>
+                    </div>
+                    
+                    <div class="trend-controls">
+                        <span class="legend-item"><span class="legend-color color-sp"></span> SP (Set Point)</span>
+                        <span class="legend-item"><span class="legend-color color-pv"></span> PV (Process Variable)</span>
+                        <span class="legend-item"><span class="legend-color color-co"></span> CO (Controller Output)</span>
+                        <button class="btn btn-outline btn-xs" onclick="chartManager.setTimeWindow(30)">30s</button>
+                        <button class="btn btn-outline btn-xs active" onclick="chartManager.setTimeWindow(60)">60s</button>
+                        <button class="btn btn-outline btn-xs" onclick="chartManager.clearData()">Clear Plot</button>
+                    </div>
+                </div>
+
+                <!-- Canvas Chart -->
+                <div class="trend-chart-wrapper">
+                    <canvas id="liveTrendChart"></canvas>
+                </div>
+
+                <!-- Numerical Readout Cards Bar -->
+                <div class="readouts-grid">
+                    <div class="readout-card">
+                        <span class="readout-label">Set Point (SP)</span>
+                        <span class="readout-val val-blue" id="readoutSP">50.0 %</span>
+                    </div>
+                    <div class="readout-card">
+                        <span class="readout-label">Process Variable (PV)</span>
+                        <span class="readout-val val-teal" id="readoutPV">0.0 %</span>
+                    </div>
+                    <div class="readout-card">
+                        <span class="readout-label">Controller Output (CO)</span>
+                        <span class="readout-val val-amber" id="readoutCO">0.0 %</span>
+                    </div>
+                    <div class="readout-card">
+                        <span class="readout-label">Error (e = SP - PV)</span>
+                        <span class="readout-val" id="readoutError">50.0 %</span>
+                    </div>
+                    <div class="readout-card">
+                        <span class="readout-label">Process State</span>
+                        <span class="readout-status" id="readoutStatus">Loop Open / Idle</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PROCESS STATUS PANEL -->
+            <div class="card status-panel-card">
+                <h3><i class="fa-solid fa-list-ul"></i> Process Apparatus Status</h3>
+                <div class="status-items-row">
+                    <div class="status-item">
+                        <span class="item-name">Pump Status:</span>
+                        <span class="item-val badge-teal" id="statusPump">OFF</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="item-name">Control Valve (CV):</span>
+                        <span class="item-val" id="statusValve">0.0 %</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="item-name">Measured Flow:</span>
+                        <span class="item-val val-teal" id="statusFlow">0.0 L/min</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="item-name">Flow Transmitter (FT):</span>
+                        <span class="item-val" id="statusFT">0.0 L/min</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="item-name">Active Controller:</span>
+                        <span class="item-val badge-blue" id="statusController">ON/OFF</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="item-name">Simulation Engine:</span>
+                        <span class="item-val" id="statusSimState">STOPPED</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- TAB 2: APPARATUS OVERVIEW -->
+        <section id="tab-apparatus" class="tab-panel">
+            <div class="apparatus-container">
+                <div class="section-header-card card">
+                    <h2><i class="fa-solid fa-cubes"></i> Apparatus & Instrumentation Breakdown</h2>
+                    <p class="sub-heading">Detailed engineering specifications and functional roles of all hardware components in the flow control loop.</p>
+                </div>
+
+                <div class="apparatus-cards-grid" id="apparatusCardsGrid">
+                    <!-- Injected dynamically by app.js -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: MATHEMATICAL THEORY -->
+        <section id="tab-theory" class="tab-panel">
+            <div class="theory-container">
+                <article class="card theory-article">
+                    <h2><i class="fa-solid fa-book"></i> Mathematical Theory & Control Principles</h2>
+                    
+                    <div class="theory-section">
+                        <h3>1. Introduction to Process Control</h3>
+                        <p>Process control is the engineering discipline that deals with maintaining output variables of a dynamic process within desired limits despite operational disturbances.</p>
+                    </div>
+
+                    <div class="theory-section">
+                        <h3>2. Open Loop vs. Closed Loop Control</h3>
+                        <p>In an <strong>open-loop system</strong>, control output is calculated without measuring the process variable (PV). In a <strong>closed-loop (feedback) system</strong>, the process variable is continuously measured by a sensor (Flow Transmitter FT) and compared against a target Set Point (SP).</p>
+                    </div>
+
+                    <div class="theory-section">
+                        <h3>3. Essential Control Loop Parameters</h3>
+                        <ul class="styled-list">
+                            <li><strong>Set Point (SP):</strong> The desired target value for the process variable.</li>
+                            <li><strong>Process Variable (PV):</strong> The measured physical property (flow rate in L/min).</li>
+                            <li><strong>Controller Output (CO):</strong> The command signal (0–100%) sent to the control valve actuator.</li>
+                            <li><strong>Error (\(e(t)\)):</strong> \(e(t) = SP(t) - PV(t)\).</li>
+                        </ul>
+                    </div>
+
+                    <div class="theory-section">
+                        <h3>4. Ideal Parallel PID Controller Equation</h3>
+                        <p>The standard continuous time PID equation combining proportional, integral, and derivative actions is:</p>
+                        <div class="math-box">
+                            \[ u(t) = K_p \left[ e(t) + \frac{1}{T_i} \int_{0}^{t} e(\tau) d\tau + T_d \frac{de(t)}{dt} \right] \]
+                        </div>
+                    </div>
+
+                    <div class="theory-section">
+                        <h3>5. Role of Controller Gains</h3>
+                        <div class="gain-explanation-grid">
+                            <div class="gain-card">
+                                <h4>Proportional Gain (\(K_p\))</h4>
+                                <p>Produces output proportional to present error. Higher \(K_p\) speeds up response and reduces steady-state error, but leaves a permanent offset in P-only mode.</p>
+                            </div>
+                            <div class="gain-card">
+                                <h4>Integral Time (\(T_i\))</h4>
+                                <p>Accumulates past error over time. Integral action completely eliminates steady-state offset (\(e_{ss} = 0\)).</p>
+                            </div>
+                            <div class="gain-card">
+                                <h4>Derivative Time (\(T_d\))</h4>
+                                <p>Predicts future error based on current rate of change (\(\frac{de}{dt}\)). Provides anticipatory damping against rapid disturbances.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="theory-section">
+                        <h3>6. ON/OFF (Bang-Bang) Control & Differential Gap</h3>
+                        <p>ON/OFF controllers output either 100% or 0%. A hysteresis band (\(\Delta H\)) prevents rapid switching chatter:</p>
+                        <div class="math-box">
+                            \[ u(t) = \begin{cases} 100\% & \text{if } e(t) > +\frac{\Delta H}{2} \\ 0\% & \text{if } e(t) < -\frac{\Delta H}{2} \end{cases} \]
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <!-- TAB 4: GUIDED PROCEDURE -->
+        <section id="tab-procedure" class="tab-panel">
+            <div class="procedure-container">
+                <div class="card procedure-card">
+                    <h2><i class="fa-solid fa-list-check"></i> Interactive Step-by-Step Experiment Procedure</h2>
+                    <p class="lead-text">Follow this procedure to conduct the flow process control experiment. Click checkmarks as you complete steps.</p>
+
+                    <div class="procedure-list" id="procedureList">
+                        <!-- Injected by app.js -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: STUDENT OBSERVATIONS -->
+        <section id="tab-observations" class="tab-panel">
+            <div class="observations-container">
+                <div class="card obs-summary-card">
+                    <div class="card-header-flex">
+                        <div>
+                            <h2><i class="fa-solid fa-table"></i> Student Experiment Observation Log</h2>
+                            <p class="sub-heading">Record and analyze process responses across different control modes.</p>
+                        </div>
+                        <div class="table-actions">
+                            <button class="btn btn-primary btn-sm" onclick="observationManager.recordCurrentState()">
+                                <i class="fa-solid fa-plus"></i> Record Result
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="observationManager.clearObservations()">
+                                <i class="fa-solid fa-trash"></i> Clear Table
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="observationManager.exportCSV()">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-wrapper">
+                        <table class="vlab-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Controller Mode</th>
+                                    <th>Set Point (%)</th>
+                                    <th>Final PV (%)</th>
+                                    <th>Overshoot (%)</th>
+                                    <th>Settling Time (s)</th>
+                                    <th>Steady-State Error (%)</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="obsTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted">No observations recorded yet. Run simulation and click "Record Result".</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 6: VIVA / QUIZ -->
+        <section id="tab-quiz" class="tab-panel">
+            <div class="quiz-container">
+                <div class="card quiz-card">
+                    <div class="card-header-flex">
+                        <div>
+                            <h2><i class="fa-solid fa-circle-question"></i> Viva Voce & Concept Verification Quiz</h2>
+                            <p class="sub-heading">Test your understanding of flow process dynamics, feedback loops, and PID controller characteristics.</p>
+                        </div>
+                        <div class="quiz-score-badge" id="quizScoreBadge" style="display: none;">
+                            Score: <span id="quizScoreText">0 / 10</span>
+                        </div>
+                    </div>
+
+                    <form id="quizForm">
+                        <div id="quizQuestionsContainer">
+                            <!-- Injected dynamically by quiz.js -->
+                        </div>
+
+                        <div class="quiz-footer">
+                            <button type="button" class="btn btn-primary" onclick="quizEngine.submitQuiz()">
+                                <i class="fa-solid fa-paper-plane"></i> Submit Answers
+                            </button>
+                            <button type="button" class="btn btn-outline" onclick="quizEngine.resetQuiz()">
+                                <i class="fa-solid fa-rotate-left"></i> Reset Quiz
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <!-- Process Control Lab - Department of Electronics and Instrumentation Engineering - Made by Adil -->
+    <footer class="app-footer">
+        <p>Process Control Lab • Department of Electronics and Instrumentation Engineering <span class="subtle-credit" title="Project Author" style="opacity: 0.25; font-size: 0.72rem; margin-left: 8px; cursor: default; user-select: none;">• Made by Adil</span></p>
+    </footer>
+
+    <!-- Scripts with Cache-Buster -->
+    <script src="js/simulation-engine.js?v=3.3"></script>
+    <script src="js/wiring-system.js?v=3.3"></script>
+    <script src="js/schematic-render.js?v=3.3"></script>
+    <script src="js/chart-manager.js?v=3.3"></script>
+    <script src="js/observation-manager.js?v=3.3"></script>
+    <script src="js/quiz.js?v=3.3"></script>
+    <script src="js/app.js?v=3.3"></script>
+</body>
+</html>
